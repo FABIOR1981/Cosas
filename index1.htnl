@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Juego de la Vida - Célula Ancestral</title>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: #00ff96;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            border: 2px solid #333;
+            box-shadow: 0 0 20px rgba(0, 255, 150, 0.2);
+            cursor: crosshair;
+        }
+        .controls {
+            margin: 20px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 8px;
+        }
+        button {
+            background: #00ff96;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #00cc78;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Juego de la Vida: La Célula Ancestral</h2>
+    
+    <div class="controls">
+        <button onclick="toggleGame()">Iniciar / Pausar</button>
+        <button onclick="resetGame()">Reiniciar Semilla</button>
+        <span> (Espacio para pausar, Click para dibujar)</span>
+    </div>
+
+    <canvas id="lifeCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('lifeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const resolution = 8; // Tamaño de cada célula
+        canvas.width = 800;
+        canvas.height = 600;
+
+        const COLS = canvas.width / resolution;
+        const ROWS = canvas.height / resolution;
+
+        let grid = createGrid();
+        let running = false;
+
+        // Crear tablero vacío
+        function createGrid() {
+            return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        }
+
+        // --- SEMILLA: CÉLULA ANCESTRAL (R-pentomino) ---
+        function seedRPentomino() {
+            const centerX = Math.floor(COLS / 2);
+            const centerY = Math.floor(ROWS / 2);
+            
+            // Patrón R-pentomino
+            grid[centerY][centerX + 1] = 1;
+            grid[centerY][centerX + 2] = 1;
+            grid[centerY + 1][centerX] = 1;
+            grid[centerY + 1][centerX + 1] = 1;
+            grid[centerY + 2][centerX + 1] = 1;
+        }
+
+        // Dibujar el grid
+        function drawGrid() {
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (grid[row][col]) {
+                        ctx.fillStyle = '#00ff96';
+                        ctx.fillRect(col * resolution, row * resolution, resolution - 1, resolution - 1);
+                    }
+                }
+            }
+        }
+
+        // Calcular la siguiente generación
+        function nextGeneration() {
+            const newGrid = createGrid();
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const neighbors = countNeighbors(row, col);
+                    
+                    if (grid[row][col] === 1) {
+                        // Célula viva
+                        newGrid[row][col] = (neighbors === 2 || neighbors === 3) ? 1 : 0;
+                    } else {
+                        // Célula muerta
+                        newGrid[row][col] = (neighbors === 3) ? 1 : 0;
+                    }
+                }
+            }
+
+            grid = newGrid;
+        }
+
+        // Contar vecinos vivos
+        function countNeighbors(row, col) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    
+                    const newRow = (row + i + ROWS) % ROWS;
+                    const newCol = (col + j + COLS) % COLS;
+                    count += grid[newRow][newCol];
+                }
+            }
+            return count;
+        }
+
+        // Loop de animación
+        function gameLoop() {
+            if (running) {
+                nextGeneration();
+                drawGrid();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Control del juego
+        function toggleGame() {
+            running = !running;
+        }
+
+        function resetGame() {
+            grid = createGrid();
+            seedRPentomino();
+            drawGrid();
+        }
+
+        // Click para dibujar
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / resolution);
+            const y = Math.floor((e.clientY - rect.top) / resolution);
+            
+            if (x >= 0 && x < COLS && y >= 0 && y < ROWS) {
+                grid[y][x] = grid[y][x] ? 0 : 1;
+                drawGrid();
+            }
+        });
+
+        // Tecla espacio para pausar
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                toggleGame();
+            }
+        });
+
+        // Inicializar
+        seedRPentomino();
+        drawGrid();
+        gameLoop();
+    </script>
+
+</body>
+</html>
